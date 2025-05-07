@@ -131,10 +131,11 @@ public class ChatBotUI {
             }
         });
 
-        // === Settings Button Action Placeholder ===
+        // === Settings Button Action ===
         settingsButton.addActionListener(e -> {
-            // TODO: Implement a settings window and open it here
-            JOptionPane.showMessageDialog(frame, "Settings window will be added soon.");
+            // Open the Settings window when the button is clicked
+            SettingsWindow settingsWindow = new SettingsWindow(frame); // 'frame' is your main window
+            settingsWindow.setVisible(true); // Show the settings window
         });
 
         // Show the window
