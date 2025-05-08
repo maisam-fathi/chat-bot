@@ -1,7 +1,11 @@
 package de.solidassist.chatbot.ui;
 
+import de.solidassist.chatbot.service.OllamaChatService;
+import de.solidassist.chatbot.controller.ChatBotController;
+
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledDocument;
@@ -14,7 +18,13 @@ import java.util.logging.Logger;
 
 public class ChatBotUI {
 
+    private static final Logger logger = Logger.getLogger(ChatBotUI.class.getName());
+    private static OllamaChatService chatService;
+
     public static void main(String[] args) {
+        // Initialize the chatbot service
+        chatService = ChatBotController.initChatService();
+
         // Launch the UI on the Event Dispatch Thread
         SwingUtilities.invokeLater(ChatBotUI::createAndShowGUI);
     }
@@ -42,19 +52,17 @@ public class ChatBotUI {
         chatDisplay.setEditable(false);
 
         // Apply custom font and paragraph style for better readability
-        StyledDocument doc = chatDisplay.getStyledDocument();
         Style defaultStyle = chatDisplay.addStyle("default", null);
         StyleConstants.setFontFamily(defaultStyle, "SansSerif");
-        StyleConstants.setFontSize(defaultStyle, 14);
-        StyleConstants.setLineSpacing(defaultStyle, 0.3f); // More space between lines
-        StyleConstants.setSpaceAbove(defaultStyle, 8);     // More space above each message
-        StyleConstants.setSpaceBelow(defaultStyle, 8);     // More space below each message
+        StyleConstants.setFontSize(defaultStyle, 16);
+        StyleConstants.setLineSpacing(defaultStyle, 0.2f); // More space between lines
+        StyleConstants.setSpaceAbove(defaultStyle, 0);     // More space above each message
+        StyleConstants.setSpaceBelow(defaultStyle, 0);     // More space below each message
 
         chatDisplay.setParagraphAttributes(defaultStyle, true);
 
         JScrollPane chatScroll = new JScrollPane(chatDisplay);
         topPanel.add(chatScroll, BorderLayout.CENTER);
-
 
         // Add the top panel to the center of the frame
         frame.add(topPanel, BorderLayout.CENTER);
@@ -64,6 +72,7 @@ public class ChatBotUI {
         middlePanel.setBorder(new EmptyBorder(5, 5, 5, 5));
 
         JTextField inputField = new JTextField(); // User types here
+        inputField.setFont(new Font("SansSerif", Font.PLAIN, 16));
         JButton sendButton = new JButton("Send"); // Send button
 
         middlePanel.add(inputField, BorderLayout.CENTER);
@@ -101,11 +110,42 @@ public class ChatBotUI {
         sendButton.addActionListener(e -> {
             String userText = inputField.getText().trim();
             if (!userText.isEmpty()) {
-                // Highlight user's message in blue
-                appendChat(chatDisplay, "🙂: " + userText + "\n", Color.BLUE);
-                inputField.setText("");
-                // TODO: Replace this with real streamed response from the chatbot
-                appendChat(chatDisplay, "🤖: typing...\n", Color.DARK_GRAY);
+                // Scrolling the chat window down
+                chatDisplay.setCaretPosition(chatDisplay.getDocument().getLength());
+                // Disable the Send button and change its label to "Waiting"
+                sendButton.setEnabled(false);
+                sendButton.setText("Waiting");
+
+                // Display the user's message in the chat area
+                appendChat(chatDisplay, "\n🙂: " + userText + "\n", Color.BLUE);
+                inputField.setText(""); // Clear the input field
+
+                // Save the starting position of the 'typing...' message
+                int typingStart = chatDisplay.getDocument().getLength();
+
+                // Temporary 'typing...' message from the chatbot
+                appendChat(chatDisplay, "\n🤖: typing...\n", Color.DARK_GRAY);
+
+                // Fetch chatbot's response asynchronously
+                getChatbotResponse(userText, chatbotResponse -> {
+                    try {
+                        // Remove the 'typing...' message
+                        chatDisplay.getDocument().remove(typingStart, "🤖: typing...\n".length() + 1);
+                    } catch (BadLocationException ex) {
+                        logger.log(Level.SEVERE, "Failed to remove typing message", ex);
+                    }
+
+                    // Append the actual chatbot response
+                    appendChat(chatDisplay, "\n🤖: " + chatbotResponse + "\n", Color.BLACK);
+
+                    // Re-enable the Send button and restore its label to "Send"
+                    sendButton.setEnabled(true);
+                    sendButton.setText("Send");
+
+                    // Estimate the position near the start of the LLM response
+                    int offset = Math.max(chatDisplay.getDocument().getLength() - (chatbotResponse.length() / 50) * 50, 0);
+                    chatDisplay.setCaretPosition(offset);
+                });
             }
         });
 
@@ -126,7 +166,6 @@ public class ChatBotUI {
                         sendButton.doClick(); // Simulate send button click
                         e.consume(); // Prevent newline
                     }
-                    // Else allow default behavior (go to new line)
                 }
             }
         });
@@ -142,22 +181,6 @@ public class ChatBotUI {
         frame.setVisible(true);
     }
 
-    /**
-     * Logger instance used for reporting errors or important events.
-     * Using java.util.logging to provide robust logging instead of printStackTrace().
-     */
-    private static final Logger logger = Logger.getLogger(ChatBotUI.class.getName());
-
-    /**
-     * Appends a new piece of styled text to the provided JTextPane.
-     *
-     * @param pane  The JTextPane where the message should be displayed.
-     * @param text  The actual text content to append.
-     * @param color The color in which the text should be rendered.
-     *
-     * This method adds styling (e.g., color) to the inserted text using Swing's style API.
-     * Any exceptions during the insertion are logged using java.util.logging.
-     */
     private static void appendChat(JTextPane pane, String text, Color color) {
         try {
             var doc = pane.getStyledDocument();
@@ -167,5 +190,18 @@ public class ChatBotUI {
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Error appending chat message", e);
         }
+    }
+
+    private static void getChatbotResponse(String userText, java.util.function.Consumer<String> callback) {
+        new Thread(() -> {
+            try {
+                // Use the OllamaChatService to fetch the chatbot response
+                String response = chatService.chat(userText);
+                SwingUtilities.invokeLater(() -> callback.accept(response));
+            } catch (Exception e) {
+                logger.log(Level.WARNING, "Failed to fetch chatbot response", e);
+                SwingUtilities.invokeLater(() -> callback.accept("Sorry, an error occurred while fetching the response."));
+            }
+        }).start();
     }
 }
