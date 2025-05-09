@@ -8,9 +8,9 @@ import java.io.File;
  * SettingsWindow is a modal dialog that allows users to configure various settings
  * for the chatbot application. These include:
  *
- * - LLM API URL: The endpoint for the language model service.
- * - Server Selector: Allows choosing between local and remote server.
- * - Model Selector: Selects the model type (e.g., llama2, mistral).
+ * - LLM Server URL: The endpoint for the language model service.
+ * - Provider: Allows choosing between local and remote server.
+ * - Model Name: Selects the model type (e.g., llama2, mistral).
  * - Reference Document: Lets user browse and load a text or PDF file used as knowledge input for RAG.
  * - Max Tokens: A slider that sets max tokens as a percentage, to adapt to different model limits.
  * - Temperature: A slider representing the randomness of output, also as a percentage.
@@ -45,17 +45,22 @@ public class SettingsWindow extends JDialog {
 
         int row = 0;
 
-        // === Row 1: LLM API URL ===
-        JTextField apiUrlField = new JTextField(20);
-        addRow(row++, "LLM API URL:", apiUrlField);
+        // === Row 1: LLM Server URL ===
+        JTextField llmServerUrlField = new JTextField(20);
+        llmServerUrlField.setText("http://localhost:11434"); // Default URL for Ollama (Local)
+        addRow(row++, "LLM Server URL:", llmServerUrlField);
 
-        // === Row 2: Server Selector ===
-        JComboBox<String> serverSelector = new JComboBox<>(new String[]{"Localhost", "Remote"});
-        addRow(row++, "Server Selector:", serverSelector);
+        // === Row 2: Provider ===
+        JComboBox<String> llmProviderSelector = new JComboBox<>(new String[]{
+                "Localhost", "Remote", "OpenAI", "HuggingFace", "Ollama"
+        }); // Added more provider options
+        addRow(row++, "Provider:", llmProviderSelector);
 
-        // === Row 3: Model Selector ===
-        JComboBox<String> modelSelector = new JComboBox<>(new String[]{"llama2", "mistral", "gpt4all"});
-        addRow(row++, "Model Selector:", modelSelector);
+        // === Row 3: Model Name ===
+        JComboBox<String> llmModelSelector = new JComboBox<>(new String[]{
+                "llama2", "llama3", "mistral", "gpt-3.5", "gpt-4", "bert", "gpt4all"
+        }); // Expanded model options
+        addRow(row++, "Model Name:", llmModelSelector);
 
         // === Row 4: Reference Document + Browse Button ===
         gbc.gridx = 0;
