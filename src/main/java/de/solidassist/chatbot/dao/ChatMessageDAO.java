@@ -1,0 +1,113 @@
+package de.solidassist.chatbot.dao;
+
+import de.solidassist.chatbot.model.ChatMessage;
+import de.solidassist.chatbot.util.DatabaseConnection;
+
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * ChatMessageDAO provides CRUD operations for the chat_messages table.
+ * It handles database interactions related to chat messages.
+ */
+public class ChatMessageDAO {
+
+    /**
+     * Inserts a new ChatMessage into the database.
+     *
+     * @param message ChatMessage object containing message data.
+     * @return Generated message ID.
+     * @throws SQLException if a database access error occurs.
+     */
+    public int insert(ChatMessage message) throws SQLException {
+        String sql = "INSERT INTO chat_messages (session_id, sender, message) VALUES (?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            stmt.setInt(1, message.getSessionId());
+            stmt.setString(2, message.getSender());
+            stmt.setString(3, message.getMessage());
+
+            int affectedRows = stmt.executeUpdate();
+
+            if (affectedRows == 0) {
+                throw new SQLException("Creating message failed, no rows affected.");
+            }
+
+            try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                if (generatedKeys.next()) {
+                    return generatedKeys.getInt(1);
+                } else {
+                    throw new SQLException("Creating message failed, no ID obtained.");
+                }
+            }
+        }
+    }
+
+    /**
+     * Retrieves all messages for a specific session ID.
+     *
+     * @param sessionId The session ID.
+     * @return List of ChatMessage objects.
+     * @throws SQLException if a database access error occurs.
+     */
+    public List<ChatMessage> getMessagesBySessionId(int sessionId) throws SQLException {
+        List<ChatMessage> messages = new ArrayList<>();
+        String sql = "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC";
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, sessionId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    ChatMessage message = new ChatMessage();
+                    message.setId(rs.getInt("id"));
+                    message.setSessionId(rs.getInt("session_id"));
+                    message.setSender(rs.getString("sender"));
+                    message.setMessage(rs.getString("message"));
+                    message.setCreatedAt(rs.getTimestamp("created_at"));
+                    messages.add(message);
+                }
+            }
+        }
+        return messages;
+    }
+
+    /**
+     * Deletes all messages by session ID.
+     *
+     * @param sessionId The session ID.
+     * @return true if deleted successfully, false otherwise.
+     * @throws SQLException if a database access error occurs.
+     */
+    public boolean deleteMessagesBySessionId(int sessionId) throws SQLException {
+        String sql = "DELETE FROM chat_messages WHERE session_id = ?";
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, sessionId);
+
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * Deletes a single message by its ID.
+     *
+     * @param id The message ID.
+     * @return true if deleted successfully, false otherwise.
+     * @throws SQLException if a database access error occurs.
+     */
+    public boolean deleteById(int id) throws SQLException {
+        String sql = "DELETE FROM chat_messages WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, id);
+
+            return stmt.executeUpdate() > 0;
+        }
+    }
+}
