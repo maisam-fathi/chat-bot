@@ -24,6 +24,7 @@ public class ChatBotUI {
 
     private static final Logger logger = Logger.getLogger(ChatBotUI.class.getName());
     private static OllamaChatService chatService;
+    private static int currentSessionId = -1; // Keep track of the current chat session ID
     private static final ChatHistoryService chatHistoryService = new ChatHistoryService();
 
     public static void main(String[] args) {
@@ -141,6 +142,26 @@ public class ChatBotUI {
                 // Temporary 'typing...' message from the chatbot
                 appendChat(chatDisplay, "\n🤖: typing...\n", Color.DARK_GRAY);
 
+                // Check if a session exists, create new if not
+                if (currentSessionId == -1) {
+                    try {
+                        currentSessionId = chatHistoryService.createSession("New Chat");
+                    } catch (Exception ex) {
+                        logger.log(Level.SEVERE, "Failed to create new chat session", ex);
+                        appendChat(chatDisplay, "\n⚠️ Failed to create chat session\n", Color.RED);
+                        sendButton.setEnabled(true);
+                        sendButton.setText("Send");
+                        return;
+                    }
+                }
+
+                // Save user message to the database
+                try {
+                    chatHistoryService.addMessageToSession(currentSessionId, "user", userText);
+                } catch (Exception ex) {
+                    logger.log(Level.SEVERE, "Failed to save user message", ex);
+                }
+
                 // Fetch chatbot's response asynchronously
                 getChatbotResponse(userText, chatbotResponse -> {
                     try {
@@ -151,7 +172,14 @@ public class ChatBotUI {
                     }
 
                     // Append the actual chatbot response
-                    appendChat(chatDisplay, "\n🤖: " + chatbotResponse + "\n", Color.BLACK);
+                    appendChat(chatDisplay, "\n🤖: " + chatbotResponse.trim() + "\n", Color.BLACK);
+
+                    // Save bot message to the database
+                    try {
+                        chatHistoryService.addMessageToSession(currentSessionId, "bot", chatbotResponse);
+                    } catch (Exception ex) {
+                        logger.log(Level.SEVERE, "Failed to save bot message", ex);
+                    }
 
                     // Re-enable the Send button and restore its label to "Send"
                     sendButton.setEnabled(true);
@@ -192,19 +220,21 @@ public class ChatBotUI {
             settingsWindow.setVisible(true); // Show the settings window
         });
 
-        // Add a session selection listener to the history list /*N*/
+        // Add a session selection listener to the history list
         historyList.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 String selectedValue = historyList.getSelectedValue();
                 if (selectedValue != null) {
                     try {
-                        // Extract session ID from the selected item text
                         int idStart = selectedValue.lastIndexOf("(ID: ") + 5;
                         int idEnd = selectedValue.lastIndexOf(")");
                         int sessionId = Integer.parseInt(selectedValue.substring(idStart, idEnd));
 
+                        // Reset the current session ID to the selected one
+                        currentSessionId = sessionId;
+
                         // Fetch chat messages for the selected session using the available method
-                        List<ChatMessage> messages = chatHistoryService.getMessagesForSession(sessionId);  /*C*/
+                        List<ChatMessage> messages = chatHistoryService.getMessagesForSession(sessionId);
 
                         // Clear the current chat display
                         chatDisplay.setText("");
@@ -244,6 +274,8 @@ public class ChatBotUI {
             try {
                 // Use the OllamaChatService to fetch the chatbot response
                 String response = chatService.chat(userText);
+
+                // Pass the response to the callback without saving it here
                 SwingUtilities.invokeLater(() -> callback.accept(response));
             } catch (Exception e) {
                 logger.log(Level.WARNING, "Failed to fetch chatbot response", e);
