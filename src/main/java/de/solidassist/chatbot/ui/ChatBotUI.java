@@ -8,18 +8,23 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledDocument;
 import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import de.solidassist.chatbot.service.ChatHistoryService;
+import de.solidassist.chatbot.model.ChatSession;
+import de.solidassist.chatbot.model.ChatMessage;
+import java.sql.SQLException;
+import java.util.List;
 
 public class ChatBotUI {
 
     private static final Logger logger = Logger.getLogger(ChatBotUI.class.getName());
     private static OllamaChatService chatService;
+    private static final ChatHistoryService chatHistoryService = new ChatHistoryService();
 
     public static void main(String[] args) {
         // Initialize the chatbot service
@@ -40,11 +45,21 @@ public class ChatBotUI {
         // === ROW 1: Chat history panel (left) and chat display (right) ===
         JPanel topPanel = new JPanel(new BorderLayout(5, 5));
 
-        // Left: History list with scroll pane (1/5 of the total window width)
+        // Left: History list with scroll pane
         JList<String> historyList = new JList<>();
+        DefaultListModel<String> historyListModel = new DefaultListModel<>();
+        historyList.setModel(historyListModel);
+        // Load chat history from the database when GUI loads
+        try {
+            List<ChatSession> sessions = chatHistoryService.getAllSessions();
+            for (ChatSession session : sessions) {
+                historyListModel.addElement(session.getSessionName() + " (ID: " + session.getId() + ")");
+            }
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Failed to load chat history", e);
+        }
         JScrollPane historyScroll = new JScrollPane(historyList);
-        historyScroll.setPreferredSize(new Dimension(180, 0)); // Approx. 1/5 of 900px
-        // TODO: Load chat history from database and group by date range
+        historyScroll.setPreferredSize(new Dimension(180, 0));
         topPanel.add(historyScroll, BorderLayout.WEST);
 
         // Right: Chat display area (read-only)
@@ -176,6 +191,38 @@ public class ChatBotUI {
             SettingsWindow settingsWindow = new SettingsWindow(frame); // 'frame' is your main window
             settingsWindow.setVisible(true); // Show the settings window
         });
+
+        // Add a session selection listener to the history list /*N*/
+        historyList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                String selectedValue = historyList.getSelectedValue();
+                if (selectedValue != null) {
+                    try {
+                        // Extract session ID from the selected item text
+                        int idStart = selectedValue.lastIndexOf("(ID: ") + 5;
+                        int idEnd = selectedValue.lastIndexOf(")");
+                        int sessionId = Integer.parseInt(selectedValue.substring(idStart, idEnd));
+
+                        // Fetch chat messages for the selected session using the available method
+                        List<ChatMessage> messages = chatHistoryService.getMessagesForSession(sessionId);  /*C*/
+
+                        // Clear the current chat display
+                        chatDisplay.setText("");
+
+                        // Display all messages
+                        for (ChatMessage message : messages) {
+                            String prefix = message.getSender().equalsIgnoreCase("user") ? "🙂: " : "🤖: ";
+                            Color color = message.getSender().equalsIgnoreCase("user") ? Color.BLUE : Color.BLACK;
+                            appendChat(chatDisplay, prefix + message.getMessage() + "\n", color);
+                        }
+
+                    } catch (Exception ex) {
+                        logger.log(Level.WARNING, "Failed to load chat messages for selected session", ex);
+                    }
+                }
+            }
+        });
+
 
         // Show the window
         frame.setVisible(true);
