@@ -200,36 +200,7 @@ public class ChatBotUI {
         });
 
         // === New Chat Button Action ===
-        newChatButton.addActionListener(e -> {
-            try {
-                // Create a new session and keep its ID
-                int newSessionId = chatHistoryService.createSession("New Chat");
-                currentSessionId = newSessionId;
-
-                // Clear chat display
-                chatDisplay.setText("");
-
-                // Refresh the list
-                historyListModel.clear();
-                List<ChatSession> sessions = chatHistoryService.getAllSessions();
-                for (ChatSession session : sessions) {
-                    historyListModel.addElement(session.getSessionName() + " (ID: " + session.getId() + ")");
-                }
-
-                // Find the index of the newly created session and select it
-                for (int i = 0; i < historyListModel.size(); i++) {
-                    String item = historyListModel.get(i);
-                    if (item.contains("(ID: " + newSessionId + ")")) {
-                        historyList.setSelectedIndex(i);
-                        break;
-                    }
-                }
-
-            } catch (Exception ex) {
-                logger.log(Level.SEVERE, "Failed to create new chat session", ex);
-                appendChat(chatDisplay, "\n Failed to create new chat session\n", Color.RED);
-            }
-        });
+        newChatButton.addActionListener(e -> createNewChatAndSelect(historyListModel, historyList, chatDisplay));
 
         // === Handle Enter key behavior depending on checkbox ===
         inputField.addKeyListener(new KeyAdapter() {
@@ -285,6 +256,8 @@ public class ChatBotUI {
             }
         });
 
+        // === Auto-create new chat on the first load ===
+        createNewChatAndSelect(historyListModel, historyList, chatDisplay);
 
         // Show the window
         frame.setVisible(true);
@@ -315,4 +288,37 @@ public class ChatBotUI {
             }
         }).start();
     }
+
+    // === Create and Select New Chat Session ===
+    private static void createNewChatAndSelect(DefaultListModel<String> historyListModel, JList<String> historyList, JTextPane chatDisplay) {
+        try {
+            // Create a new session and keep its ID
+            int newSessionId = chatHistoryService.createSession("New Chat");
+            currentSessionId = newSessionId;
+
+            // Clear chat display
+            chatDisplay.setText("");
+
+            // Refresh the list
+            historyListModel.clear();
+            List<ChatSession> sessions = chatHistoryService.getAllSessions();
+            for (ChatSession session : sessions) {
+                historyListModel.addElement(session.getSessionName() + " (ID: " + session.getId() + ")");
+            }
+
+            // Find the index of the newly created session and select it
+            for (int i = 0; i < historyListModel.size(); i++) {
+                String item = historyListModel.get(i);
+                if (item.contains("(ID: " + newSessionId + ")")) {
+                    historyList.setSelectedIndex(i);
+                    break;
+                }
+            }
+
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Failed to create new chat session", ex);
+            appendChat(chatDisplay, "\n Failed to create new chat session\n", Color.RED);
+        }
+    }
+
 }
