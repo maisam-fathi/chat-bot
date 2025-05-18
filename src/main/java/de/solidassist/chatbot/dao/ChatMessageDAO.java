@@ -76,19 +76,17 @@ public class ChatMessageDAO {
     }
 
     /**
-     * Deletes all messages by session ID.
+     * Deletes all messages by session ID using the provided connection.
      *
+     * @param conn      The active database connection.
      * @param sessionId The session ID.
      * @return true if deleted successfully, false otherwise.
      * @throws SQLException if a database access error occurs.
      */
-    public boolean deleteMessagesBySessionId(int sessionId) throws SQLException {
+    public boolean deleteMessagesBySessionId(Connection conn, int sessionId) throws SQLException {
         String sql = "DELETE FROM chat_messages WHERE session_id = ?";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, sessionId);
-
             return stmt.executeUpdate() > 0;
         }
     }
