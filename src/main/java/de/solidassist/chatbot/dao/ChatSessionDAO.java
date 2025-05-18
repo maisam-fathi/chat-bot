@@ -113,17 +113,16 @@ public class ChatSessionDAO {
     }
 
     /**
-     * Deletes a ChatSession by its ID.
+     * Deletes a ChatSession by its ID using the provided connection.
      *
-     * @param id The session ID.
+     * @param conn The active database connection.
+     * @param id   The session ID.
      * @return true if deleted successfully, false otherwise.
      * @throws SQLException if a database access error occurs.
      */
-    public boolean delete(int id) throws SQLException {
+    public boolean delete(Connection conn, int id) throws SQLException {
         String sql = "DELETE FROM chat_sessions WHERE id = ?";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, id);
 
             return stmt.executeUpdate() > 0;
