@@ -8,6 +8,8 @@ import de.solidassist.chatbot.model.ChatMessage;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Service class responsible for managing chat history for GUI.
@@ -71,5 +73,21 @@ public class ChatHistoryService {
         chatMessage.setSender(sender);
         chatMessage.setMessage(message);
         return messageDAO.insert(chatMessage);
+    }
+
+    /**
+     * Deletes a session and all its associated messages.
+     *
+     * @param sessionId The session ID to delete.
+     * @return true if deleted successfully, false otherwise.
+     */
+    public boolean deleteSessionWithMessages(int sessionId) {
+        try {
+            ChatSessionService sessionService = new ChatSessionService();
+            return sessionService.deleteSessionWithMessages(sessionId);
+        } catch (Exception e) {
+            Logger.getLogger(ChatHistoryService.class.getName()).log(Level.SEVERE, "Failed to delete session with messages", e);
+            return false;
+        }
     }
 }
