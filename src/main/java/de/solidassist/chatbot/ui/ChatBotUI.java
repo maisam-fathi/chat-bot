@@ -14,9 +14,11 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import de.solidassist.chatbot.service.ChatHistoryService;
 import de.solidassist.chatbot.model.ChatSession;
 import de.solidassist.chatbot.model.ChatMessage;
+
 import java.sql.SQLException;
 import java.util.List;
 
@@ -102,10 +104,12 @@ public class ChatBotUI {
         JButton settingsButton = new JButton("Settings");
         JButton copyButton = new JButton("Copy Chat");
         JButton newChatButton = new JButton("New Chat");
+        JButton deleteChatButton = new JButton("Delete Chat");
 
         leftButtons.add(settingsButton);
         leftButtons.add(copyButton);
         leftButtons.add(newChatButton);
+        leftButtons.add(deleteChatButton);
 
         // Right: Send on Enter checkbox
         JCheckBox sendOnEnterCheck = new JCheckBox("Send on Enter", true);
@@ -202,7 +206,12 @@ public class ChatBotUI {
         // === New Chat Button Action ===
         newChatButton.addActionListener(e -> createNewChatAndSelect(historyListModel, historyList, chatDisplay));
 
-        // === Handle Enter key behavior depending on checkbox ===
+        // === Delete Chat Button Action ===
+        deleteChatButton.addActionListener(e -> {
+            deleteCurrentSession(historyListModel, historyList, chatDisplay);
+        });
+
+        // === Handle the Enter key behavior depending on checkbox ===
         inputField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
@@ -321,4 +330,48 @@ public class ChatBotUI {
         }
     }
 
+    /**
+     * Deletes the current chat session from the database and updates the UI.
+     *
+     * @param historyListModel The list model for chat history.
+     * @param historyList      The UI component displaying chat history.
+     * @param chatDisplay      The chat display area.
+     */
+    private static void deleteCurrentSession(DefaultListModel<String> historyListModel, JList<String> historyList, JTextPane chatDisplay) {
+        if (currentSessionId == -1) {
+            JOptionPane.showMessageDialog(null, "Please select a chat session to delete.", "No Session Selected", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int confirm = JOptionPane.showConfirmDialog(null,
+                "Are you sure you want to delete this chat session?", "Confirm Delete", JOptionPane.YES_NO_OPTION);
+
+        if (confirm != JOptionPane.YES_OPTION) return;
+
+        try {
+            boolean success = chatHistoryService.deleteSessionWithMessages(currentSessionId);
+
+            if (success) {
+                currentSessionId = -1;
+                chatDisplay.setText("");
+
+                // Refresh the history list
+                historyListModel.clear();
+                List<ChatSession> sessions = chatHistoryService.getAllSessions();
+                for (ChatSession session : sessions) {
+                    historyListModel.addElement(session.getSessionName() + " (ID: " + session.getId() + ")");
+                }
+
+                // Auto-create a new chat session for smooth UX
+                createNewChatAndSelect(historyListModel, historyList, chatDisplay);
+
+                JOptionPane.showMessageDialog(null, "Chat session deleted successfully.", "Success", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(null, "Failed to delete chat session.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception ex) {
+            logger.log(Level.SEVERE, "Error deleting chat session", ex);
+            JOptionPane.showMessageDialog(null, "Error deleting chat session.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 }
