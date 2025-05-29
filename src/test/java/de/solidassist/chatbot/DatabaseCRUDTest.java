@@ -5,6 +5,7 @@ import java.util.*;
 
 import de.solidassist.chatbot.dao.*;
 import de.solidassist.chatbot.model.*;
+import de.solidassist.chatbot.util.DatabaseConnection;
 
 public class DatabaseCRUDTest {
     public static void main(String[] args) {
@@ -32,7 +33,8 @@ public class DatabaseCRUDTest {
 
             System.out.println("Do you want to delete ChatSession with ID " + sessionId + "? [y/n]");
             if (scanner.nextLine().equalsIgnoreCase("y")) {
-                sessionDAO.delete(sessionId);
+                Connection conn = DatabaseConnection.getInstance().getConnection();
+                sessionDAO.delete(conn, sessionId);
                 System.out.println("🗑️ ChatSession deleted.");
             }
 
