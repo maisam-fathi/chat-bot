@@ -7,6 +7,8 @@ import de.solidassist.chatbot.model.ChatSession;
 import de.solidassist.chatbot.model.ChatMessage;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -89,5 +91,65 @@ public class ChatHistoryService {
             Logger.getLogger(ChatHistoryService.class.getName()).log(Level.SEVERE, "Failed to delete session with messages", e);
             return false;
         }
+    }
+
+    /**
+     * Retrieves the last N messages of a session ordered by creation time.
+     *
+     * @param sessionId the session ID to fetch messages for
+     * @param limit     the maximum number of messages to return
+     * @return list of the most recent messages for the session
+     */
+    public List<ChatMessage> getLastNMessagesForSession(int sessionId, int limit) {
+        return messageDAO.getLastNMessagesBySessionId(sessionId, limit);
+    }
+
+    /**
+     * Retrieves the last N chat messages for a session and trims bot messages to a word limit.
+     *
+     * @param sessionId    the ID of the session to retrieve messages from
+     * @param limit        the number of recent messages to retrieve
+     * @param botWordLimit the maximum number of words allowed in bot messages
+     * @return a list of chat messages, with bot messages trimmed if necessary
+     */
+    public List<ChatMessage> getTrimmedMessagesForMemory(int sessionId, int limit, int botWordLimit) {
+        List<ChatMessage> rawMessages = new ArrayList<>();
+        List<ChatMessage> trimmedMessages = new ArrayList<>();
+
+        try {
+            // Load the most recent N messages from the database
+            rawMessages = messageDAO.getLastNMessagesBySessionId(sessionId, limit);
+
+            for (ChatMessage message : rawMessages) {
+                // Clone the message to avoid modifying the original list
+                ChatMessage trimmedMessage = new ChatMessage();
+                trimmedMessage.setId(message.getId());
+                trimmedMessage.setSessionId(message.getSessionId());
+                trimmedMessage.setSender(message.getSender());
+                trimmedMessage.setCreatedAt(message.getCreatedAt());
+
+                if ("bot".equalsIgnoreCase(message.getSender())) {
+                    // Trim the bot message to the specified word limit
+                    String[] words = message.getMessage().split("\\s+");
+                    if (words.length > botWordLimit) {
+                        String trimmedText = String.join(" ", Arrays.copyOfRange(words, 0, botWordLimit));
+                        trimmedMessage.setMessage(trimmedText);
+                    } else {
+                        trimmedMessage.setMessage(message.getMessage());
+                    }
+                } else {
+                    // Keep full user messages
+                    trimmedMessage.setMessage(message.getMessage());
+                }
+
+                trimmedMessages.add(trimmedMessage);
+            }
+
+        } catch (Exception e) {
+            Logger.getLogger(ChatHistoryService.class.getName())
+                    .log(Level.SEVERE, "Failed to retrieve trimmed messages for memory", e);
+        }
+
+        return trimmedMessages;
     }
 }
