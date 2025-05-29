@@ -3,6 +3,10 @@ package de.solidassist.chatbot.dao;
 import de.solidassist.chatbot.model.ChatMessage;
 import de.solidassist.chatbot.util.DatabaseConnection;
 
+import java.util.Collections;
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -107,5 +111,52 @@ public class ChatMessageDAO {
 
             return stmt.executeUpdate() > 0;
         }
+    }
+
+    private static final Logger logger = Logger.getLogger(ChatMessageDAO.class.getName());
+
+    /**
+     * Retrieves the last N messages for a given session, ordered by timestamp ascending.
+     *
+     * @param sessionId the ID of the chat session
+     * @param limit     the maximum number of messages to retrieve
+     * @return a list of ChatMessage objects ordered by time (oldest to newest)
+     */
+    public List<ChatMessage> getLastNMessagesBySessionId(int sessionId, int limit) {
+        List<ChatMessage> messages = new ArrayList<>();
+
+        String sql = "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT ?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, sessionId);
+            stmt.setInt(2, limit);
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                ChatMessage message = new ChatMessage();
+                message.setId(rs.getInt("id"));
+                message.setSessionId(rs.getInt("session_id"));
+                message.setSender(rs.getString("sender"));
+                message.setMessage(rs.getString("message"));
+
+                // Convert SQL timestamp to java.util.Date
+                Timestamp timestamp = rs.getTimestamp("created_at");
+                if (timestamp != null) {
+                    message.setCreatedAt(new Date(timestamp.getTime()));
+                }
+
+                messages.add(message);
+            }
+
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Error loading last N messages", e);
+        }
+
+        // Reverse list to ensure oldest-to-newest order
+        Collections.reverse(messages);
+        return messages;
     }
 }
