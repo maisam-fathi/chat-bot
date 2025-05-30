@@ -2,6 +2,7 @@ package de.solidassist.chatbot.ui;
 
 import de.solidassist.chatbot.service.OllamaChatService;
 import de.solidassist.chatbot.controller.ChatBotController;
+import de.solidassist.chatbot.model.ChatMessage;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -18,8 +19,6 @@ import java.util.logging.Logger;
 
 import de.solidassist.chatbot.service.ChatHistoryService;
 import de.solidassist.chatbot.model.ChatSession;
-import de.solidassist.chatbot.model.ChatMessage;
-
 import java.sql.SQLException;
 import java.util.List;
 
@@ -309,16 +308,34 @@ public class ChatBotUI {
         }
     }
 
+    /**
+     * Sends the user's message to the chatbot and handles the response.
+     * <p>
+     * This version supports chat memory by retrieving the recent messages from the session,
+     * converting them to LangChain-compatible messages, and passing them along with the new
+     * user input to the language model.
+     *
+     * @param userText The user's input message.
+     * @param callback A callback to handle the chatbot's response asynchronously.
+     */
     private static void getChatbotResponse(String userText, java.util.function.Consumer<String> callback) {
         new Thread(() -> {
             try {
-                // Use the OllamaChatService to fetch the chatbot response
-                String response = chatService.chat(userText);
+                // Retrieve trimmed memory messages for the current session
+                List<ChatMessage> trimmedMessages =
+                        chatHistoryService.getTrimmedMessagesForMemory(currentSessionId, 50, 300); // Example config
 
-                // Pass the response to the callback without saving it here
+                // Convert to LangChain4j-compatible messages
+                List<dev.langchain4j.data.message.ChatMessage> memoryMessages =
+                        chatService.convertToLangChainMessages(trimmedMessages);
+
+                // Generate response using memory
+                String response = chatService.chatWithMemory(memoryMessages, userText);
+
+                // Send response to the callback (on EDT)
                 SwingUtilities.invokeLater(() -> callback.accept(response));
             } catch (Exception e) {
-                logger.log(Level.WARNING, "Failed to fetch chatbot response", e);
+                logger.log(Level.WARNING, "Failed to fetch chatbot response with memory", e);
                 SwingUtilities.invokeLater(() -> callback.accept("Sorry, an error occurred while fetching the response."));
             }
         }).start();
