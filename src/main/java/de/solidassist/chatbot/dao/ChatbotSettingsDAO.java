@@ -1,7 +1,7 @@
 package de.solidassist.chatbot.dao;
 
 import de.solidassist.chatbot.model.ChatbotSettings;
-import de.solidassist.chatbot.util.DatabaseConnection;
+import de.solidassist.chatbot.util.SQLiteConnection;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -24,7 +24,7 @@ public class ChatbotSettingsDAO {
         String sql = "INSERT INTO chatbot_settings " +
                 "(llm_server_url, llm_provider, llm_model_name, max_tokens_percent, temperature_percent, language) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setString(1, settings.getLlmServerUrl());
@@ -59,7 +59,7 @@ public class ChatbotSettingsDAO {
      */
     public ChatbotSettings getSettingsById(int id) throws SQLException {
         String sql = "SELECT * FROM chatbot_settings WHERE id = ?";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
@@ -82,7 +82,7 @@ public class ChatbotSettingsDAO {
     public List<ChatbotSettings> getAllSettings() throws SQLException {
         List<ChatbotSettings> settingsList = new ArrayList<>();
         String sql = "SELECT * FROM chatbot_settings ORDER BY updated_at DESC";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
@@ -105,7 +105,7 @@ public class ChatbotSettingsDAO {
                 "llm_server_url = ?, llm_provider = ?, llm_model_name = ?, " +
                 "max_tokens_percent = ?, temperature_percent = ?, language = ? " +
                 "WHERE id = ?";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, settings.getLlmServerUrl());
@@ -129,7 +129,7 @@ public class ChatbotSettingsDAO {
      */
     public boolean deleteSettings(int id) throws SQLException {
         String sql = "DELETE FROM chatbot_settings WHERE id = ?";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);

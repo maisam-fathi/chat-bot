@@ -1,7 +1,7 @@
 package de.solidassist.chatbot.dao;
 
 import de.solidassist.chatbot.model.ChatMessage;
-import de.solidassist.chatbot.util.DatabaseConnection;
+import de.solidassist.chatbot.util.SQLiteConnection;
 
 import java.util.Collections;
 import java.util.logging.Logger;
@@ -26,7 +26,7 @@ public class ChatMessageDAO {
      */
     public int insert(ChatMessage message) throws SQLException {
         String sql = "INSERT INTO chat_messages (session_id, sender, message) VALUES (?, ?, ?)";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             stmt.setInt(1, message.getSessionId());
@@ -59,7 +59,7 @@ public class ChatMessageDAO {
     public List<ChatMessage> getMessagesBySessionId(int sessionId) throws SQLException {
         List<ChatMessage> messages = new ArrayList<>();
         String sql = "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at ASC";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, sessionId);
@@ -104,7 +104,7 @@ public class ChatMessageDAO {
      */
     public boolean deleteById(int id) throws SQLException {
         String sql = "DELETE FROM chat_messages WHERE id = ?";
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
@@ -127,7 +127,7 @@ public class ChatMessageDAO {
 
         String sql = "SELECT * FROM chat_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT ?";
 
-        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+        try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, sessionId);
