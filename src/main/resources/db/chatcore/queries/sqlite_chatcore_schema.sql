@@ -15,14 +15,15 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
 );
 
--- Table: chatbot_settings
 CREATE TABLE IF NOT EXISTS chatbot_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_name TEXT NOT NULL,
     llm_server_url TEXT NOT NULL,
     llm_provider TEXT NOT NULL,
     llm_model_name TEXT NOT NULL,
+    model_access_token TEXT DEFAULT '',
+    reference_file_path TEXT DEFAULT '',
     max_tokens_percent INTEGER NOT NULL,
     temperature_percent INTEGER NOT NULL,
-    language TEXT NOT NULL,
     updated_at DATETIME DEFAULT (datetime('now'))
 );
