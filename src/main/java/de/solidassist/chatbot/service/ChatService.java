@@ -18,7 +18,7 @@ import org.springframework.stereotype.Service;
  * making it a candidate for component scanning and dependency injection.
  */
 @Service
-public class OllamaChatService {
+public class ChatService {
 
     /**
      * The language model used to generate chat responses.
@@ -26,11 +26,11 @@ public class OllamaChatService {
     private final ChatLanguageModel model;
 
     /**
-     * Constructs a new {@code OllamaChatService} with the provided language model.
+     * Constructs a new {@code ChatService} with the provided language model.
      *
      * @param model the {@link ChatLanguageModel} used for generating responses
      */
-    public OllamaChatService(ChatLanguageModel model) {
+    public ChatService(ChatLanguageModel model) {
         this.model = model;
     }
 

@@ -1,6 +1,6 @@
 package de.solidassist.chatbot.controller;
 
-import de.solidassist.chatbot.service.OllamaChatService;
+import de.solidassist.chatbot.service.ChatService;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -13,14 +13,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/chat")
 public class ChatController {
 
-    private final OllamaChatService chatService;
+    private final ChatService chatService;
 
     /**
      * Constructor injection for the chat service.
      *
      * @param chatService service that connects to the language model
      */
-    public ChatController(OllamaChatService chatService) {
+    public ChatController(ChatService chatService) {
         this.chatService = chatService;
     }
 

@@ -1,6 +1,6 @@
 package de.solidassist.chatbot.ui;
 
-import de.solidassist.chatbot.service.OllamaChatService;
+import de.solidassist.chatbot.service.ChatService;
 import de.solidassist.chatbot.controller.ChatBotController;
 import de.solidassist.chatbot.model.ChatMessage;
 
@@ -25,11 +25,11 @@ import java.util.List;
 public class ChatBotUI {
 
     private static final Logger logger = Logger.getLogger(ChatBotUI.class.getName());
-    private static OllamaChatService chatService;
+    private static ChatService chatService;
     private static int currentSessionId = -1; // Keep track of the current chat session ID
     private static final ChatHistoryService chatHistoryService = new ChatHistoryService();
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws SQLException {
         // Initialize the chatbot service
         chatService = ChatBotController.initChatService();
 
