@@ -1,214 +1,330 @@
 package de.solidassist.chatbot.ui;
 
-import javax.swing.*;
-import java.util.Objects;
-import java.util.logging.Logger;
-import java.util.logging.Level;
-import java.awt.*;
-import java.io.File;
+import de.solidassist.chatbot.controller.ChatBotController;
 import de.solidassist.chatbot.dao.ChatbotSettingsDAO;
 import de.solidassist.chatbot.model.ChatbotSettings;
+import de.solidassist.chatbot.util.AppPreferenceUtils;
 
-/**
- * SettingsWindow is a modal dialog that allows users to configure various settings
- * for the chatbot application. These include:
- *
- * - LLM Server URL: The endpoint for the language model service.
- * - Provider: Allows choosing between local and remote server.
- * - Model Name: Selects the model type (e.g., llama2, mistral).
- * - Reference Document: Lets user browse and load a text or PDF file used as knowledge input for RAG.
- * - Max Tokens: A slider that sets max tokens as a percentage, to adapt to different model limits.
- * - Temperature: A slider representing the randomness of output, also as a percentage.
- * - Language: Sets the interface or request language (e.g., English or German).
- * - Apply / Save / Cancel buttons:
- *     - Apply: Save the settings to the database and notify user that a restart is required.
- *     - Save: Same as Apply, but also closes the dialog.
- *     - Cancel: Closes the window without saving.
- *
- * Behavior:
- * - Settings are persisted in the database using ChatbotSettingsDAO.
- * - Changes are not applied at runtime; the user is notified to restart the application after saving.
- * - The class uses GridBagLayout for flexible alignment and responsive row structure.
- * - Helper method `addRow` is used to reduce code duplication when adding simple label-component pairs.
- *
- * TODOs:
- * - Implement runtime refreshing of LLM settings in future versions.
- * - Implement advanced mapping of slider percentages to actual model-specific token/temperature values.
- * - Consider replacing database storage with a more dynamic configuration manager supporting live reload.
- *
- * Usage:
- * Create an instance of this dialog and call setVisible(true) to show it:
- *     new SettingsWindow(parentFrame).setVisible(true);
- */
+import javax.swing.*;
+import java.awt.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public class SettingsWindow extends JDialog {
-
-    private final JTextField propertiesFileField = new JTextField(20);
+public class SettingsWindow extends JFrame {
+    private final Logger logger = Logger.getLogger(SettingsWindow.class.getName());
     private final ChatbotSettingsDAO settingsDAO = new ChatbotSettingsDAO();
+    private List<ChatbotSettings> allSettings;
     private ChatbotSettings loadedSettings;
-    private static final Logger logger = Logger.getLogger(SettingsWindow.class.getName());
-    private final JTextField llmServerUrlField;
-    private final JComboBox<String> llmProviderSelector;
-    private final JComboBox<String> llmModelSelector;
-    private final JSlider maxTokensSlider;
-    private final JSlider temperatureSlider;
-    private final JComboBox<String> languageSelector;
 
-    public SettingsWindow(JFrame parent) {
-        super(parent, "Settings", true);
-        setSize(550, 400);
-        setLocationRelativeTo(parent);
+    private final JComboBox<String> profileSelector = new JComboBox<>();
+    private final JTextField profileNameField = new JTextField(20);
+    private final JTextField llmServerUrlField = new JTextField(20);
+    private final JComboBox<String> llmProviderSelector = new JComboBox<>(new String[]{"ollama", "openai", "cohere"});
+    private final JTextField llmModelField = new JTextField(20);
+    private final JTextField modelAccessTokenField = new JTextField(20);
+    private final JTextField referenceFileField = new JTextField(20);
+    private final JSlider maxTokensSlider = new JSlider(0, 100, 70);
+    private final JSlider temperatureSlider = new JSlider(0, 100, 50);
+    private final JLabel maxTokensLabel = new JLabel("70%");
+    private final JLabel temperatureLabel = new JLabel("50%");
+    private final JButton newProfileButton = new JButton("New");
+    private final JButton deleteProfileButton = new JButton("Delete");
+    private final JButton browseButton = new JButton("Browse");
+    private final JButton testButton = new JButton("Test");
+    private final JButton saveButton = new JButton("Save");
+    private final JButton cancelButton = new JButton("Cancel");
+
+    /**
+     * Constructor that initializes the Settings window and its components.
+     */
+    public SettingsWindow(JFrame frame) {
+        setTitle("Chatbot Settings");
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new GridBagLayout());
+        setSize(500, 380);
+        setLocationRelativeTo(null);
 
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 10, 5, 10);
+        gbc.insets = new Insets(5, 5, 5, 5);
         gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        int row = 0;
-
-        // === Row 1: LLM Server URL ===
-        llmServerUrlField = new JTextField(20);
-        llmServerUrlField.setText("http://localhost:11434"); // Default URL for Ollama (Local)
-        addRow(row++, "LLM Server URL:", llmServerUrlField);
-
-        // === Row 2: Provider ===
-        llmProviderSelector = new JComboBox<>(new String[]{
-                "Localhost", "Remote", "OpenAI", "HuggingFace", "Ollama"
-        }); // Added more provider options
-        addRow(row++, "Provider:", llmProviderSelector);
-
-        // === Row 3: Model Name ===
-        llmModelSelector = new JComboBox<>(new String[]{
-                "llama2", "llama3", "mistral", "gpt-3.5", "gpt-4", "bert", "gpt4all"
-        }); // Expanded model options
-        addRow(row++, "Model Name:", llmModelSelector);
-
-        // === Row 4: Reference Document + Browse Button ===
         gbc.gridx = 0;
-        gbc.gridy = row;
-        add(new JLabel("Reference Document:"), gbc);
+        gbc.gridy = 0;
 
+        // Row 0: Profile selector with New and Delete buttons
+        add(new JLabel("Select Profile:"), gbc);
+        gbc.gridx++;
+        add(profileSelector, gbc);
+        gbc.gridx++;
+        add(newProfileButton, gbc);
+        gbc.gridx++;
+        add(deleteProfileButton, gbc);
+
+        // Row 1: Profile Name
+        gbc.gridy++;
+        gbc.gridx = 0;
+        add(new JLabel("Profile Name:"), gbc);
         gbc.gridx = 1;
-        add(propertiesFileField, gbc);
+        gbc.gridwidth = 3;
+        add(profileNameField, gbc);
+        gbc.gridwidth = 1;
 
-        JButton browseButton = new JButton("Browse...");
-        gbc.gridx = 2;
+        // Row 2: LLM Server URL
+        gbc.gridy++;
+        gbc.gridx = 0;
+        add(new JLabel("LLM Server URL:"), gbc);
+        gbc.gridx = 1;
+        gbc.gridwidth = 3;
+        add(llmServerUrlField, gbc);
+        gbc.gridwidth = 1;
+
+        // Row 3: LLM Provider
+        gbc.gridy++;
+        gbc.gridx = 0;
+        add(new JLabel("LLM Provider:"), gbc);
+        gbc.gridx = 1;
+        gbc.gridwidth = 3;
+        add(llmProviderSelector, gbc);
+        gbc.gridwidth = 1;
+
+        // Row 4: Model Name
+        gbc.gridy++;
+        gbc.gridx = 0;
+        add(new JLabel("LLM Model Name:"), gbc);
+        gbc.gridx = 1;
+        gbc.gridwidth = 3;
+        add(llmModelField, gbc);
+        gbc.gridwidth = 1;
+
+        // Row 5: Access Token
+        gbc.gridy++;
+        gbc.gridx = 0;
+        add(new JLabel("Access Token:"), gbc);
+        gbc.gridx = 1;
+        gbc.gridwidth = 3;
+        add(modelAccessTokenField, gbc);
+        gbc.gridwidth = 1;
+
+        // Row 6: Reference File with Browse button
+        gbc.gridy++;
+        gbc.gridx = 0;
+        add(new JLabel("Reference File:"), gbc);
+        gbc.gridx = 1;
+        gbc.gridwidth = 2;
+        add(referenceFileField, gbc);
+        gbc.gridx = 3;
+        gbc.gridwidth = 1;
         add(browseButton, gbc);
 
-        browseButton.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
-            int result = fileChooser.showOpenDialog(SettingsWindow.this);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                File selectedFile = fileChooser.getSelectedFile();
-                propertiesFileField.setText(selectedFile.getAbsolutePath());
-            }
-        });
-
-        row++;
-
-        // === Row 5: Max Tokens Slider (as percentage) ===
+        // Row 7: Max Tokens Slider
+        gbc.gridy++;
         gbc.gridx = 0;
-        gbc.gridy = row;
-        add(new JLabel("Max Tokens (%):"), gbc);
-
+        add(new JLabel("Max Tokens:"), gbc);
         gbc.gridx = 1;
         gbc.gridwidth = 2;
-        // Represent Max Tokens as percentage (0-100%)
-        maxTokensSlider = new JSlider(0, 100, 25);  // Default 25%
-        maxTokensSlider.setMajorTickSpacing(25);
-        maxTokensSlider.setPaintTicks(true);
-        maxTokensSlider.setPaintLabels(true);
         add(maxTokensSlider, gbc);
+        gbc.gridx = 3;
+        add(maxTokensLabel, gbc);
         gbc.gridwidth = 1;
-        row++;
 
-        // === Row 6: Temperature Slider (as percentage) ===
+        // Row 8: Temperature Slider
+        gbc.gridy++;
         gbc.gridx = 0;
-        gbc.gridy = row;
-        add(new JLabel("Temperature (%):"), gbc);
-
+        add(new JLabel("Temperature:"), gbc);
         gbc.gridx = 1;
         gbc.gridwidth = 2;
-        // Represent Temperature as percentage (0-100%)
-        temperatureSlider = new JSlider(0, 100, 70); // Default 70%
-        temperatureSlider.setMajorTickSpacing(20);
-        temperatureSlider.setPaintTicks(true);
-        temperatureSlider.setPaintLabels(true);
         add(temperatureSlider, gbc);
+        gbc.gridx = 3;
+        add(temperatureLabel, gbc);
         gbc.gridwidth = 1;
-        row++;
 
-        // === Row 7: Language ===
-        languageSelector = new JComboBox<>(new String[]{"English", "German"});
-        addRow(row++, "Language:", languageSelector);
+        // Row 9: Buttons
+        gbc.gridy++;
+        gbc.gridx = 1;
+        add(testButton, gbc);
+        gbc.gridx++;
+        add(saveButton, gbc);
+        gbc.gridx++;
+        add(cancelButton, gbc);
 
-        // === Row 8: Buttons (Apply, Save, Cancel) ===
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton applyButton = new JButton("Apply");
-        JButton saveButton = new JButton("Save");
-        JButton cancelButton = new JButton("Cancel");
-
-        buttonPanel.add(applyButton);
-        buttonPanel.add(saveButton);
-        buttonPanel.add(cancelButton);
-
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        gbc.gridwidth = 3;
-        gbc.anchor = GridBagConstraints.EAST;
-        add(buttonPanel, gbc);
-
-        // For simplicity, load the first setting if exists (assuming only one config is active)
-        try {
-            if (!settingsDAO.getAllSettings().isEmpty()) {
-                loadedSettings = settingsDAO.getAllSettings().get(0);
-                llmServerUrlField.setText(loadedSettings.getLlmServerUrl());
-                llmProviderSelector.setSelectedItem(loadedSettings.getLlmProvider());
-                llmModelSelector.setSelectedItem(loadedSettings.getLlmModelName());
-                maxTokensSlider.setValue(loadedSettings.getMaxTokensPercent());
-                temperatureSlider.setValue(loadedSettings.getTemperaturePercent());
-                languageSelector.setSelectedItem(loadedSettings.getLanguage());
-            }
-        } catch (Exception ex) {
-            logger.log(Level.SEVERE, "Failed to load settings from database", ex);
-        }
-
-        // === Button Actions ===
-        applyButton.addActionListener(e -> {
-            saveSettingsToDatabase();
-            JOptionPane.showMessageDialog(this,
-                    "Settings saved. Please restart the application to apply the changes.",
-                    "Restart Required",
-                    JOptionPane.INFORMATION_MESSAGE);
-        });
-
-        saveButton.addActionListener(e -> {
-            saveSettingsToDatabase();
-            JOptionPane.showMessageDialog(this,
-                    "Settings saved. Please restart the application to apply the changes.",
-                    "Restart Required",
-                    JOptionPane.INFORMATION_MESSAGE);
-            dispose();
-        });
-
-        cancelButton.addActionListener(e -> dispose());
+        setupListeners();
+        loadProfileList();
     }
 
     /**
-     * Utility method to add a label and component to a row.
+     * Loads available profile names into the combo box and loads the last selected one.
      */
-    private void addRow(int row, String labelText, JComponent component) {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 10, 5, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+    private void loadProfileList() {
+        try {
 
-        gbc.gridx = 0;
-        gbc.gridy = row;
-        add(new JLabel(labelText), gbc);
+            allSettings = settingsDAO.getAllSettings();
+            profileSelector.removeAllItems();
 
-        gbc.gridx = 1;
-        gbc.gridwidth = 2;
-        add(component, gbc);
+            for (ChatbotSettings s : allSettings) {
+                profileSelector.addItem(s.getProfileName());
+            }
+
+            // Try to restore the last selected profile by ID
+            String lastSelectedIdStr = AppPreferenceUtils.loadPreference("lastSelectedProfileId");
+
+            if (lastSelectedIdStr != null) {
+                try {
+                    int lastSelectedId = Integer.parseInt(lastSelectedIdStr);
+
+                    for (int i = 0; i < allSettings.size(); i++) {
+                        int currentId = allSettings.get(i).getId();
+
+                        if (currentId == lastSelectedId) {
+                            profileSelector.setSelectedIndex(i);
+                            loadSelectedProfile();
+                            return;
+                        }
+                    }
+
+                } catch (NumberFormatException ex) {
+                    logger.log(Level.WARNING, "Invalid profile ID in preferences: " + lastSelectedIdStr, ex);
+                }
+            }
+
+            // Fallback: load first if nothing found
+            if (!allSettings.isEmpty()) {
+                System.out.println("Falling back to first profile (index 0)");
+                profileSelector.setSelectedIndex(0);
+                loadSelectedProfile();
+            } else {
+                System.out.println("No profiles available to load.");
+            }
+
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Failed to load profile list.", e);
+        }
+    }
+
+    /**
+     * Loads selected profile data into the form fields.
+     */
+    private void loadSelectedProfile() {
+        int index = profileSelector.getSelectedIndex();
+        if (index >= 0 && index < allSettings.size()) {
+            loadedSettings = allSettings.get(index);
+            profileNameField.setText(loadedSettings.getProfileName());
+            llmServerUrlField.setText(loadedSettings.getLlmServerUrl());
+            llmProviderSelector.setSelectedItem(loadedSettings.getLlmProvider());
+            llmModelField.setText(loadedSettings.getLlmModelName());
+            modelAccessTokenField.setText(loadedSettings.getModelAccessToken());
+            referenceFileField.setText(loadedSettings.getReferenceFilePath());
+            maxTokensSlider.setValue(loadedSettings.getMaxTokensPercent());
+            temperatureSlider.setValue(loadedSettings.getTemperaturePercent());
+        }
+    }
+
+    /**
+     * Sets up listeners for sliders and buttons.
+     */
+    private void setupListeners() {
+        profileSelector.addActionListener(e -> {
+            int index = profileSelector.getSelectedIndex();
+            if (index >= 0 && index < allSettings.size()) {
+                loadedSettings = allSettings.get(index);
+                loadSelectedProfile();
+
+                // Save the ID of the selected profile as last used
+                try {
+                    AppPreferenceUtils.savePreference("lastSelectedProfileId", String.valueOf(loadedSettings.getId()));
+                } catch (Exception ex) {
+                    logger.log(Level.WARNING, "Failed to save last selected profile ID.", ex);
+                }
+            }
+        });
+
+        maxTokensSlider.addChangeListener(e -> maxTokensLabel.setText(maxTokensSlider.getValue() + "%"));
+        temperatureSlider.addChangeListener(e -> temperatureLabel.setText(temperatureSlider.getValue() + "%"));
+
+        browseButton.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                referenceFileField.setText(fileChooser.getSelectedFile().getAbsolutePath());
+            }
+        });
+
+        // Listener for the "New Profile" button: inserts a new profile based on current UI fields
+        newProfileButton.addActionListener(e -> {
+            try {
+                // Read field values and create a new settings object
+                ChatbotSettings newSettings = new ChatbotSettings();
+                newSettings.setProfileName(profileNameField.getText().trim());
+                newSettings.setLlmServerUrl(llmServerUrlField.getText().trim());
+                newSettings.setLlmProvider(Objects.requireNonNull(llmProviderSelector.getSelectedItem()).toString());
+                newSettings.setLlmModelName(llmModelField.getText().trim());
+                newSettings.setModelAccessToken(modelAccessTokenField.getText().trim());
+                newSettings.setReferenceFilePath(referenceFileField.getText().trim());
+                newSettings.setMaxTokensPercent(maxTokensSlider.getValue());
+                newSettings.setTemperaturePercent(temperatureSlider.getValue());
+
+                // Insert the new settings into the database
+                int newId = settingsDAO.insertSettings(newSettings);
+                newSettings.setId(newId);
+                loadedSettings = newSettings;
+
+                // Add a new profile name to the combo box if not already present
+                String profileName = newSettings.getProfileName();
+                boolean alreadyExists = false;
+                for (int i = 0; i < profileSelector.getItemCount(); i++) {
+                    if (profileSelector.getItemAt(i).equals(profileName)) {
+                        alreadyExists = true;
+                        break;
+                    }
+                }
+                if (!alreadyExists) {
+                    profileSelector.addItem(profileName);
+                }
+                profileSelector.setSelectedItem(profileName);
+
+                // Inform the user
+                JOptionPane.showMessageDialog(this,
+                        "New profile \"" + profileName + "\" created successfully.",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "Failed to create new profile", ex);
+                JOptionPane.showMessageDialog(this,
+                        "Error creating profile: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        deleteProfileButton.addActionListener(e -> {
+            try {
+                if (loadedSettings != null && settingsDAO.deleteSettings(loadedSettings.getId())) {
+                    loadProfileList();
+                }
+            } catch (Exception ex) {
+                logger.log(Level.WARNING, "Failed to delete profile.", ex);
+            }
+        });
+
+        saveButton.addActionListener(e -> {
+            try {
+                saveSettingsToDatabase(); // Try saving settings
+
+                JOptionPane.showMessageDialog(this,
+                        "Settings saved successfully. Please restart the application to apply the changes.",
+                        "Settings Saved",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+            } catch (Exception ex) {
+                logger.log(Level.SEVERE, "Failed to save settings", ex);
+                JOptionPane.showMessageDialog(this,
+                        "An error occurred while saving settings:\n" + ex.getMessage(),
+                        "Save Failed",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        cancelButton.addActionListener(e -> dispose());
     }
 
     /**
@@ -218,20 +334,24 @@ public class SettingsWindow extends JDialog {
      */
     private void saveSettingsToDatabase() {
         try {
+            // Create a new settings object from current UI values
             ChatbotSettings settings = new ChatbotSettings();
 
-            // Read fields from UI
+            // Read values from UI fields
+            settings.setProfileName(profileNameField.getText().trim());
             settings.setLlmServerUrl(llmServerUrlField.getText().trim());
             settings.setLlmProvider(Objects.requireNonNull(llmProviderSelector.getSelectedItem()).toString());
-            settings.setLlmModelName(Objects.requireNonNull(llmModelSelector.getSelectedItem()).toString());
+            settings.setLlmModelName(llmModelField.getText().trim());
+            settings.setModelAccessToken(modelAccessTokenField.getText().trim());
+            settings.setReferenceFilePath(referenceFileField.getText().trim());
             settings.setMaxTokensPercent(maxTokensSlider.getValue());
             settings.setTemperaturePercent(temperatureSlider.getValue());
-            settings.setLanguage(Objects.requireNonNull(languageSelector.getSelectedItem()).toString());
 
-            // Check if there is an existing record and update or insert accordingly
             boolean success;
+
+            // If a profile is already loaded, update it; otherwise insert a new one
             if (loadedSettings != null) {
-                settings.setId(loadedSettings.getId()); // Ensure the correct ID for update
+                settings.setId(loadedSettings.getId());
                 success = settingsDAO.updateSettings(settings);
                 if (success) {
                     logger.info("Settings updated successfully.");
@@ -240,8 +360,19 @@ public class SettingsWindow extends JDialog {
                 }
             } else {
                 int newId = settingsDAO.insertSettings(settings);
-                logger.info("New settings inserted with ID: " + newId);
-                success = (newId > 0);
+                success = newId > 0;
+                if (success) {
+                    logger.info("New settings inserted with ID: " + newId);
+                    settings.setId(newId);
+                    loadedSettings = settings; // Update the reference to loaded settings
+                } else {
+                    logger.warning("Failed to insert new settings.");
+                }
+            }
+
+            // Reload the settings globally
+            if (success) {
+                ChatBotController.setCurrentSettings(settings);
             }
 
         } catch (Exception ex) {
