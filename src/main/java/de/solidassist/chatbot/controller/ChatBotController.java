@@ -2,11 +2,12 @@ package de.solidassist.chatbot.controller;
 
 import de.solidassist.chatbot.dao.ChatbotSettingsDAO;
 import de.solidassist.chatbot.model.ChatbotSettings;
-import de.solidassist.chatbot.service.OllamaChatService;
+import de.solidassist.chatbot.service.ChatService;
+import de.solidassist.chatbot.util.AppPreferenceUtils;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 
-import java.util.logging.Level;
+import java.sql.SQLException;
 import java.util.logging.Logger;
 
 /**
@@ -23,23 +24,34 @@ public class ChatBotController {
     private static ChatbotSettings currentSettings;
 
     /**
-     * Loads chatbot settings from the database.
-     * Falls back to default settings if loading fails.
+     * Loads the chatbot settings for the given profile ID.
+     * If the profileId is -1, it attempts to load the last selected profile ID from preferences.
+     * If that fails, it loads the default settings.
+     *
+     * @param profileId the ID of the settings profile to load, or -1 to auto-detect
      */
-    private static void loadSettings() {
-        try {
-            currentSettings = chatbotSettingsDAO.getSettingsById(1);
-            if (currentSettings == null) {
-                logger.info("No settings found in database. Using default settings.");
-                currentSettings = getDefaultSettings();
+    public static void loadSettings(int profileId) throws SQLException {
+        if (profileId == 0) {
+            String lastSelectedIdStr = AppPreferenceUtils.loadPreference("lastSelectedProfileId");
+            if (lastSelectedIdStr != null) {
+                try {
+                    profileId = Integer.parseInt(lastSelectedIdStr);
+                } catch (NumberFormatException e) {
+                    System.err.println("Invalid lastSelectedProfileId in preferences: " + lastSelectedIdStr);
+                    profileId = 0;
+                }
             }
-        } catch (Exception e) {
-            logger.log(Level.WARNING, "Failed to load chatbot settings from database. Using defaults.", e);
-            currentSettings = getDefaultSettings();
         }
 
-        // Print loaded settings for debugging
-        logger.info("Loaded settings: " + currentSettings.toString());
+        if (profileId != 0) {
+            currentSettings = chatbotSettingsDAO.getSettingsById(profileId);
+            if (currentSettings == null) {
+                logger.info("No settings found for profileId: " + profileId + ", falling back to default.");
+                currentSettings = getDefaultSettings();
+            }
+        } else {
+            currentSettings = getDefaultSettings();
+        }
     }
 
     /**
@@ -54,18 +66,17 @@ public class ChatBotController {
         defaults.setLlmModelName("llama3");
         defaults.setMaxTokensPercent(100);
         defaults.setTemperaturePercent(70);
-        defaults.setLanguage("en");
         return defaults;
     }
 
     /**
-     * Initializes the {@link OllamaChatService} using loaded settings.
+     * Initializes the {@link ChatService} using loaded settings.
      *
-     * @return an initialized instance of {@link OllamaChatService}
+     * @return an initialized instance of {@link ChatService}
      */
-    public static OllamaChatService initChatService() {
+    public static ChatService initChatService() throws SQLException {
         if (currentSettings == null) {
-            loadSettings();
+            loadSettings(getDefaultSettings().getId());
         }
         ChatLanguageModel model = OllamaChatModel.builder()
                 .baseUrl(currentSettings.getLlmServerUrl())
@@ -73,6 +84,20 @@ public class ChatBotController {
                 .temperature(currentSettings.getTemperaturePercent() / 100.0)
                 .numPredict((1000 * currentSettings.getMaxTokensPercent()) / 100)
                 .build();
-        return new OllamaChatService(model);
+        logger.info("ChatService initialized with model: " +
+                "baseUrl=" + currentSettings.getLlmServerUrl() +
+                ", modelName=" + currentSettings.getLlmModelName() +
+                ", temperature=" + (currentSettings.getTemperaturePercent() / 100.0) +
+                ", maxTokens=" + ((1000 * currentSettings.getMaxTokensPercent()) / 100));
+        return new ChatService(model);
+    }
+
+    /**
+     * Sets the current ChatbotSettings profile globally.
+     *
+     * @param settings The selected ChatbotSettings object.
+     */
+    public static void setCurrentSettings(ChatbotSettings settings) {
+        currentSettings = settings;
     }
 }

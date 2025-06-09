@@ -22,17 +22,21 @@ public class ChatbotSettingsDAO {
      */
     public int insertSettings(ChatbotSettings settings) throws SQLException {
         String sql = "INSERT INTO chatbot_settings " +
-                "(llm_server_url, llm_provider, llm_model_name, max_tokens_percent, temperature_percent, language) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+                "(profile_name, llm_server_url, llm_provider, llm_model_name, model_access_token, " +
+                "reference_file_path, max_tokens_percent, temperature_percent) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
         try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            stmt.setString(1, settings.getLlmServerUrl());
-            stmt.setString(2, settings.getLlmProvider());
-            stmt.setString(3, settings.getLlmModelName());
-            stmt.setInt(4, settings.getMaxTokensPercent());
-            stmt.setInt(5, settings.getTemperaturePercent());
-            stmt.setString(6, settings.getLanguage());
+            stmt.setString(1, settings.getProfileName());
+            stmt.setString(2, settings.getLlmServerUrl());
+            stmt.setString(3, settings.getLlmProvider());
+            stmt.setString(4, settings.getLlmModelName());
+            stmt.setString(5, settings.getModelAccessToken());
+            stmt.setString(6, settings.getReferenceFilePath());
+            stmt.setInt(7, settings.getMaxTokensPercent());
+            stmt.setInt(8, settings.getTemperaturePercent());
 
             int affectedRows = stmt.executeUpdate();
 
@@ -94,7 +98,7 @@ public class ChatbotSettingsDAO {
     }
 
     /**
-     * Updates an existing ChatbotSettings by ID.
+     * Updates the existing ChatbotSettings by ID.
      *
      * @param settings ChatbotSettings object with updated data.
      * @return true if updated successfully, false otherwise.
@@ -102,19 +106,28 @@ public class ChatbotSettingsDAO {
      */
     public boolean updateSettings(ChatbotSettings settings) throws SQLException {
         String sql = "UPDATE chatbot_settings SET " +
-                "llm_server_url = ?, llm_provider = ?, llm_model_name = ?, " +
-                "max_tokens_percent = ?, temperature_percent = ?, language = ? " +
+                "profile_name = ?, " +
+                "llm_server_url = ?, " +
+                "llm_provider = ?, " +
+                "llm_model_name = ?, " +
+                "model_access_token = ?, " +
+                "reference_file_path = ?, " +
+                "max_tokens_percent = ?, " +
+                "temperature_percent = ?, " +
+                "updated_at = CURRENT_TIMESTAMP " +
                 "WHERE id = ?";
         try (Connection conn = SQLiteConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, settings.getLlmServerUrl());
-            stmt.setString(2, settings.getLlmProvider());
-            stmt.setString(3, settings.getLlmModelName());
-            stmt.setInt(4, settings.getMaxTokensPercent());
-            stmt.setInt(5, settings.getTemperaturePercent());
-            stmt.setString(6, settings.getLanguage());
-            stmt.setInt(7, settings.getId());
+            stmt.setString(1, settings.getProfileName());
+            stmt.setString(2, settings.getLlmServerUrl());
+            stmt.setString(3, settings.getLlmProvider());
+            stmt.setString(4, settings.getLlmModelName());
+            stmt.setString(5, settings.getModelAccessToken());
+            stmt.setString(6, settings.getReferenceFilePath());
+            stmt.setInt(7, settings.getMaxTokensPercent());
+            stmt.setInt(8, settings.getTemperaturePercent());
+            stmt.setInt(9, settings.getId());
 
             return stmt.executeUpdate() > 0;
         }
@@ -148,12 +161,14 @@ public class ChatbotSettingsDAO {
     private ChatbotSettings mapResultSetToSettings(ResultSet rs) throws SQLException {
         ChatbotSettings settings = new ChatbotSettings();
         settings.setId(rs.getInt("id"));
+        settings.setProfileName(rs.getString("profile_name")); // ← new
         settings.setLlmServerUrl(rs.getString("llm_server_url"));
         settings.setLlmProvider(rs.getString("llm_provider"));
         settings.setLlmModelName(rs.getString("llm_model_name"));
+        settings.setModelAccessToken(rs.getString("model_access_token")); // ← new
+        settings.setReferenceFilePath(rs.getString("reference_file_path")); // ← new
         settings.setMaxTokensPercent(rs.getInt("max_tokens_percent"));
         settings.setTemperaturePercent(rs.getInt("temperature_percent"));
-        settings.setLanguage(rs.getString("language"));
         settings.setUpdatedAt(rs.getTimestamp("updated_at"));
         return settings;
     }

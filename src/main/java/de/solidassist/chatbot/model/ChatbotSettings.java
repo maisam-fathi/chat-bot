@@ -12,6 +12,9 @@ public class ChatbotSettings {
     // Unique identifier for the chatbot settings record (Primary Key)
     private int id;
 
+    // Profile name associated with the chatbot settings
+    private String profileName;
+
     // URL of the LLM server
     private String llmServerUrl;
 
@@ -21,14 +24,17 @@ public class ChatbotSettings {
     // Name of the LLM model (e.g., gpt-4, llama2, etc.)
     private String llmModelName;
 
+    // Access token for the model (optional)
+    private String modelAccessToken = "";
+
+    // A path for reference documents related to the model (optional)
+    private String referenceFilePath = "";
+
     // Maximum tokens limit in percent (0-100)
     private int maxTokensPercent;
 
     // Temperature for content generation in percent (0-100)
     private int temperaturePercent;
-
-    // Language code of the chatbot responses (e.g., en, de, etc.)
-    private String language;
 
     // Timestamp when the settings were last updated
     private Date updatedAt;
@@ -42,22 +48,29 @@ public class ChatbotSettings {
     /**
      * Constructor to initialize all chatbot settings fields.
      *
+     * @param id Unique identifier for the chatbot settings record.
+     * @param profileName Profile name associated with the chatbot settings.
      * @param llmServerUrl URL of the LLM server.
      * @param llmProvider Provider of the LLM.
      * @param llmModelName Name of the LLM model.
-     * @param maxTokensPercent Maximum tokens limit in percent.
-     * @param temperaturePercent Temperature for content generation in percent.
-     * @param language Language code for responses.
+     * @param modelAccessToken Access token for the model.
+     * @param referenceFilePath Path for reference documents related to the model.
+     * @param maxTokensPercent Maximum tokens limit in percent (0-100).
+     * @param temperaturePercent Temperature for content generation in percent (0-100).
      * @param updatedAt Timestamp of the last update.
      */
-    public ChatbotSettings(String llmServerUrl, String llmProvider, String llmModelName,
-                           int maxTokensPercent, int temperaturePercent, String language, Date updatedAt) {
+    public ChatbotSettings(int id, String profileName, String llmServerUrl, String llmProvider, String llmModelName,
+                           String modelAccessToken, String referenceFilePath,
+                           int maxTokensPercent, int temperaturePercent, Date updatedAt) {
+        this.id = id;
+        this.profileName = profileName != null ? profileName : "";
         this.llmServerUrl = llmServerUrl;
         this.llmProvider = llmProvider;
         this.llmModelName = llmModelName;
+        this.modelAccessToken = modelAccessToken != null ? modelAccessToken : "";
+        this.referenceFilePath = referenceFilePath != null ? referenceFilePath : "";
         this.maxTokensPercent = maxTokensPercent;
         this.temperaturePercent = temperaturePercent;
-        this.language = language;
         this.updatedAt = updatedAt;
     }
 
@@ -69,6 +82,14 @@ public class ChatbotSettings {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public String getProfileName() {
+        return profileName;
+    }
+
+    public void setProfileName(String profileName) {
+        this.profileName = profileName;
     }
 
     public String getLlmServerUrl() {
@@ -95,6 +116,22 @@ public class ChatbotSettings {
         this.llmModelName = llmModelName;
     }
 
+    public String getModelAccessToken() {
+        return modelAccessToken;
+    }
+
+    public void setModelAccessToken(String modelAccessToken) {
+        this.modelAccessToken = modelAccessToken;
+    }
+
+    public String getReferenceFilePath() {
+        return referenceFilePath;
+    }
+
+    public void setReferenceFilePath(String referenceFilePath) {
+        this.referenceFilePath = referenceFilePath;
+    }
+
     public int getMaxTokensPercent() {
         return maxTokensPercent;
     }
@@ -111,14 +148,6 @@ public class ChatbotSettings {
         this.temperaturePercent = temperaturePercent;
     }
 
-    public String getLanguage() {
-        return language;
-    }
-
-    public void setLanguage(String language) {
-        this.language = language;
-    }
-
     public Date getUpdatedAt() {
         return updatedAt;
     }
@@ -131,12 +160,14 @@ public class ChatbotSettings {
     public String toString() {
         return "ChatbotSettings{" +
                 "id=" + id +
+                ", profileName='" + profileName + '\'' +
                 ", llmServerUrl='" + llmServerUrl + '\'' +
                 ", llmProvider='" + llmProvider + '\'' +
                 ", llmModelName='" + llmModelName + '\'' +
+                ", modelAccessToken='" + modelAccessToken + '\'' +
+                ", referenceFilePath='" + referenceFilePath + '\'' +
                 ", maxTokensPercent=" + maxTokensPercent +
                 ", temperaturePercent=" + temperaturePercent +
-                ", language='" + language + '\'' +
                 ", updatedAt=" + updatedAt +
                 '}';
     }
