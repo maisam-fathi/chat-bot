@@ -4,7 +4,7 @@ import de.solidassist.chatbot.dao.ChatbotSettingsDAO;
 import de.solidassist.chatbot.model.ChatbotSettings;
 import de.solidassist.chatbot.service.ChatService;
 import de.solidassist.chatbot.util.AppPreferenceUtils;
-import dev.langchain4j.model.chat.ChatLanguageModel;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 
 import java.sql.SQLException;
@@ -78,7 +78,7 @@ public class ChatBotController {
         if (currentSettings == null) {
             loadSettings(getDefaultSettings().getId());
         }
-        ChatLanguageModel model = OllamaChatModel.builder()
+        ChatModel model = OllamaChatModel.builder()
                 .baseUrl(currentSettings.getLlmServerUrl())
                 .modelName(currentSettings.getLlmModelName())
                 .temperature(currentSettings.getTemperaturePercent() / 100.0)
