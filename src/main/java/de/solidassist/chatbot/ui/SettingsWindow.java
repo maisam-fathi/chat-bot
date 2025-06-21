@@ -21,7 +21,7 @@ public class SettingsWindow extends JFrame {
     private final JComboBox<String> profileSelector = new JComboBox<>();
     private final JTextField profileNameField = new JTextField(20);
     private final JTextField llmServerUrlField = new JTextField(20);
-    private final JComboBox<String> llmProviderSelector = new JComboBox<>(new String[]{"ollama", "openai", "cohere"});
+    private final JComboBox<String> llmProviderSelector = new JComboBox<>(new String[]{"ollama", "openai", "github"});
     private final JTextField llmModelField = new JTextField(20);
     private final JTextField modelAccessTokenField = new JTextField(20);
     private final JTextField referenceFileField = new JTextField(20);

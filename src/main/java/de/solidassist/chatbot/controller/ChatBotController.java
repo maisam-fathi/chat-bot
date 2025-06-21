@@ -6,6 +6,7 @@ import de.solidassist.chatbot.service.ChatService;
 import de.solidassist.chatbot.util.AppPreferenceUtils;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
+import dev.langchain4j.model.github.GitHubModelsChatModel;
 
 import java.sql.SQLException;
 import java.util.logging.Logger;
@@ -38,7 +39,6 @@ public class ChatBotController {
                     profileId = Integer.parseInt(lastSelectedIdStr);
                 } catch (NumberFormatException e) {
                     System.err.println("Invalid lastSelectedProfileId in preferences: " + lastSelectedIdStr);
-                    profileId = 0;
                 }
             }
         }
@@ -70,25 +70,41 @@ public class ChatBotController {
     }
 
     /**
-     * Initializes the {@link ChatService} using loaded settings.
+     * Initializes the ChatService based on current settings.
      *
-     * @return an initialized instance of {@link ChatService}
+     * @return ChatService instance with the appropriate ChatModel
+     * @throws SQLException if settings cannot be loaded
      */
     public static ChatService initChatService() throws SQLException {
         if (currentSettings == null) {
             loadSettings(getDefaultSettings().getId());
         }
-        ChatModel model = OllamaChatModel.builder()
-                .baseUrl(currentSettings.getLlmServerUrl())
-                .modelName(currentSettings.getLlmModelName())
-                .temperature(currentSettings.getTemperaturePercent() / 100.0)
-                .numPredict((1000 * currentSettings.getMaxTokensPercent()) / 100)
-                .build();
-        logger.info("ChatService initialized with model: " +
-                "baseUrl=" + currentSettings.getLlmServerUrl() +
-                ", modelName=" + currentSettings.getLlmModelName() +
-                ", temperature=" + (currentSettings.getTemperaturePercent() / 100.0) +
-                ", maxTokens=" + ((1000 * currentSettings.getMaxTokensPercent()) / 100));
+
+        ChatModel model = switch (currentSettings.getLlmProvider().toLowerCase()) {
+            case "github" -> GitHubModelsChatModel.builder()
+                    .gitHubToken(currentSettings.getModelAccessToken())
+                    .temperature(currentSettings.getTemperaturePercent() / 100.0)
+                    .maxTokens((1000 * currentSettings.getMaxTokensPercent()) / 100)
+                    .build();
+            case "ollama" -> OllamaChatModel.builder()
+                    .baseUrl(currentSettings.getLlmServerUrl())
+                    .modelName(currentSettings.getLlmModelName())
+                    .temperature(currentSettings.getTemperaturePercent() / 100.0)
+                    .numPredict((1000 * currentSettings.getMaxTokensPercent()) / 100)
+                    .build();
+            default -> {
+                logger.info("Invalid LlmProvider. Falling back to default Ollama settings.");
+                yield OllamaChatModel.builder()
+                        .baseUrl(getDefaultSettings().getLlmServerUrl())
+                        .modelName(getDefaultSettings().getLlmModelName())
+                        .temperature(getDefaultSettings().getTemperaturePercent() / 100.0)
+                        .numPredict((1000 * getDefaultSettings().getMaxTokensPercent()) / 100)
+                        .build();
+            }
+        };
+
+        // Determine which provider to use
+        logger.info("ChatService initialized with provider: " + currentSettings.getLlmProvider());
         return new ChatService(model);
     }
 
