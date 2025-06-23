@@ -4,14 +4,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.nio.file.Path;
 
 /**
  * SQLiteConnection provides connections to the SQLite database.
  * It ensures foreign key constraints are enabled for each connection.
  */
 public class SQLiteConnection {
-
-    private static final String DB_URL = "jdbc:sqlite:solidassist_chatcore.db";
 
     /**
      * Returns a connection to the SQLite database with foreign key constraints enabled.
@@ -20,7 +19,11 @@ public class SQLiteConnection {
      * @throws SQLException if a database access error occurs
      */
     public static Connection getConnection() throws SQLException {
-        Connection conn = DriverManager.getConnection(DB_URL);
+        // Get the full path to the database file
+        Path dbPath = DatabasePathUtils.getDatabaseFilePath();
+        String dbUrl = "jdbc:sqlite:" + dbPath;
+
+        Connection conn = DriverManager.getConnection(dbUrl);
 
         // Enable foreign key constraints
         try (Statement stmt = conn.createStatement()) {
