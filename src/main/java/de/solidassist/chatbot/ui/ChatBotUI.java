@@ -3,6 +3,9 @@ package de.solidassist.chatbot.ui;
 import de.solidassist.chatbot.service.ChatService;
 import de.solidassist.chatbot.controller.ChatBotController;
 import de.solidassist.chatbot.model.ChatMessage;
+import de.solidassist.chatbot.util.SQLiteConnection;
+import de.solidassist.chatbot.util.DatabaseInitializer;
+import de.solidassist.chatbot.util.SeedDataLoader;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -13,6 +16,7 @@ import java.awt.*;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,12 +33,39 @@ public class ChatBotUI {
     private static int currentSessionId = -1; // Keep track of the current chat session ID
     private static final ChatHistoryService chatHistoryService = new ChatHistoryService();
 
-    public static void main(String[] args) throws SQLException {
-        // Initialize the chatbot service
-        chatService = ChatBotController.initChatService();
 
-        // Launch the UI on the Event Dispatch Thread
-        SwingUtilities.invokeLater(ChatBotUI::createAndShowGUI);
+    /**
+     * The entry point of the application.
+     *
+     * <p>This method performs the following tasks:
+     * <ol>
+     *<li>Establishes a connection to the SQLite database. If the database file does not exist, it will be created.</li>
+     *<li>Initializes the database schema by creating required tables if they do not already exist.</li>
+     *<li>Inserts default settings if the chatbot_settings table is empty.</li>
+     *<li>Initializes the chatbot service that will handle user interactions.</li>
+     *<li>Starts the graphical user interface (GUI) using the Event Dispatch Thread to ensure thread safety.</li>
+     * </ol>
+     *
+     * <p>If any exception occurs during startup, it will be logged and a user-friendly error message will be displayed.
+     *
+     * @param args command-line arguments (not used in this application)
+     */
+
+    public static void main(String[] args) {
+        try {
+            Connection connection = SQLiteConnection.getConnection();
+            DatabaseInitializer.initializeDatabase(connection);
+            SeedDataLoader.insertDefaultSettingsIfEmpty(connection);
+            chatService = ChatBotController.initChatService();
+            SwingUtilities.invokeLater(ChatBotUI::createAndShowGUI);
+
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Failed to start application", e);
+            JOptionPane.showMessageDialog(null,
+                    "Failed to start the application:\n" + e.getMessage(),
+                    "Startup Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private static void createAndShowGUI() {
