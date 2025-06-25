@@ -24,7 +24,7 @@ public class LangChain4jTest {
                 .build();
 
         // Send simple prompt and print response
-        String response = model.generate("What is the capital of Germany?");
+        String response = model.chat("What is the capital of Germany?");
         System.out.println("Ollama response: " + response);
     }
 }

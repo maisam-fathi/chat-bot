@@ -35,6 +35,7 @@ dependencies {
     implementation 'dev.langchain4j:langchain4j:1.0.1' // LangChain4j
     implementation 'dev.langchain4j:langchain4j-ollama:1.0.1-beta6' // LangChain4j-ollama:1.0.1-beta6
     implementation 'dev.langchain4j:langchain4j-github-models:1.0.1-beta6'
+    implementation 'dev.langchain4j:langchain4j-open-ai:1.0.1'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'  // OkHttp for HTTP requests
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'  // Jackson for JSON processing
     runtimeOnly 'com.h2database:h2'

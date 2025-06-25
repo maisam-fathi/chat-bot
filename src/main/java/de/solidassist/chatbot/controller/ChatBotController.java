@@ -7,6 +7,7 @@ import de.solidassist.chatbot.util.AppPreferenceUtils;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.github.GitHubModelsChatModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
 
 import java.sql.SQLException;
 import java.util.logging.Logger;
@@ -92,6 +93,12 @@ public class ChatBotController {
                     .temperature(currentSettings.getTemperaturePercent() / 100.0)
                     .numPredict((1000 * currentSettings.getMaxTokensPercent()) / 100)
                     .build();
+            case "openai" -> OpenAiChatModel.builder()
+                    .apiKey(currentSettings.getModelAccessToken())
+                    .modelName(currentSettings.getLlmModelName())
+                    .temperature(currentSettings.getTemperaturePercent() / 100.0)
+                    .maxTokens((1000 * currentSettings.getMaxTokensPercent()) / 100)
+                    .build();
             default -> {
                 logger.info("Invalid LlmProvider. Falling back to default Ollama settings.");
                 yield OllamaChatModel.builder()
@@ -104,7 +111,11 @@ public class ChatBotController {
         };
 
         // Determine which provider to use
-        logger.info("ChatService initialized with provider: " + currentSettings.getLlmProvider());
+        logger.info("ChatService initialized with -> provider: " + currentSettings.getLlmProvider() +
+                " | LLM Model: " + currentSettings.getLlmModelName() +
+                " | Temperature(%): " + currentSettings.getTemperaturePercent() +
+                " | MaxTokens(%): " + currentSettings.getMaxTokensPercent()
+        );
         return new ChatService(model);
     }
 
