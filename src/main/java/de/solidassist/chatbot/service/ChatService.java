@@ -9,16 +9,12 @@ import dev.langchain4j.data.message.UserMessage;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.stereotype.Service;
-
 /**
  * Service class responsible for handling chat interactions using a language model.
  * <p>
  * This class delegates chat messages to the underlying {@link ChatModel}
- * and returns the generated response. It is annotated as a Spring {@code @Service},
- * making it a candidate for component scanning and dependency injection.
+ * and returns the generated response.
  */
-@Service
 public class ChatService {
 
     /**
@@ -52,7 +48,6 @@ public class ChatService {
      * @param userInput      New user input message
      * @return Generated model response
      */
-
     public String chatWithMemory(List<ChatMessage> memoryMessages, String userInput) {
         List<ChatMessage> fullConversation = new ArrayList<>(memoryMessages);
 
@@ -66,7 +61,6 @@ public class ChatService {
         AiMessage aiMessage = response.aiMessage();
         return aiMessage.text();
     }
-
 
     /**
      * Converts trimmed ChatMessage objects to LangChain4j ChatMessage instances.
