@@ -1,13 +1,12 @@
 package de.solidassist.chatbot;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import javax.swing.SwingUtilities;
+import de.solidassist.chatbot.ui.ChatBotUI;
 
-@SpringBootApplication
 public class ChatBotApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ChatBotApplication.class, args);
+        // Run the Swing GUI
+        SwingUtilities.invokeLater(ChatBotUI::createAndShowGUI);
     }
-
 }
