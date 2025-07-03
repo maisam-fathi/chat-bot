@@ -68,7 +68,7 @@ public class ChatBotUI {
         }
     }
 
-    private static void createAndShowGUI() {
+    public static void createAndShowGUI() {
         // Create the main application window
         JFrame frame = new JFrame("AI Chatbot");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -168,14 +168,14 @@ public class ChatBotUI {
                 sendButton.setText("Waiting");
 
                 // Display the user's message in the chat area
-                appendChat(chatDisplay, "\n🙂: " + userText + "\n", Color.BLUE);
+                appendChat(chatDisplay, "\nYou: " + userText + "\n", Color.BLUE);
                 inputField.setText(""); // Clear the input field
 
                 // Save the starting position of the 'typing...' message
                 int typingStart = chatDisplay.getDocument().getLength();
 
                 // Temporary 'typing...' message from the chatbot
-                appendChat(chatDisplay, "\n🤖: typing...\n", Color.DARK_GRAY);
+                appendChat(chatDisplay, "\nBot: typing...\n", Color.DARK_GRAY);
 
                 // Check if a session exists, create new if not
                 if (currentSessionId == -1) {
@@ -201,13 +201,13 @@ public class ChatBotUI {
                 getChatbotResponse(userText, chatbotResponse -> {
                     try {
                         // Remove the 'typing...' message
-                        chatDisplay.getDocument().remove(typingStart, "🤖: typing...\n".length() + 1);
+                        chatDisplay.getDocument().remove(typingStart, "Bot: typing...\n".length() + 1);
                     } catch (BadLocationException ex) {
                         logger.log(Level.SEVERE, "Failed to remove typing message", ex);
                     }
 
                     // Append the actual chatbot response
-                    appendChat(chatDisplay, "\n🤖: " + chatbotResponse.trim() + "\n", Color.BLACK);
+                    appendChat(chatDisplay, "\nBot: " + chatbotResponse.trim() + "\n", Color.BLACK);
 
                     // Save bot message to the database
                     try {
@@ -309,7 +309,7 @@ public class ChatBotUI {
 
                         // Display all messages
                         for (ChatMessage message : messages) {
-                            String prefix = message.getSender().equalsIgnoreCase("user") ? "🙂: " : "🤖: ";
+                            String prefix = message.getSender().equalsIgnoreCase("user") ? "You: " : "Bot: ";
                             Color color = message.getSender().equalsIgnoreCase("user") ? Color.BLUE : Color.BLACK;
                             appendChat(chatDisplay, prefix + message.getMessage() + "\n", color);
                         }
