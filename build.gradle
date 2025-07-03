@@ -1,7 +1,7 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '3.4.5'
-    id 'io.spring.dependency-management' version '1.1.7'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 group = 'de.solidassist'
@@ -13,34 +13,44 @@ java {
     }
 }
 
-configurations {
-    compileOnly {
-        extendsFrom annotationProcessor
-    }
-}
-
 repositories {
     mavenCentral()
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+    // JDBC drivers
     implementation 'com.mysql:mysql-connector-j:8.3.0'
     implementation 'org.xerial:sqlite-jdbc:3.49.1.0'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-    implementation 'dev.langchain4j:langchain4j:1.0.1' // LangChain4j
-    implementation 'dev.langchain4j:langchain4j-ollama:1.0.1-beta6' // LangChain4j-ollama:1.0.1-beta6
+
+    // LangChain4j and related integrations
+    implementation 'dev.langchain4j:langchain4j:1.0.1'
+    implementation 'dev.langchain4j:langchain4j-ollama:1.0.1-beta6'
     implementation 'dev.langchain4j:langchain4j-github-models:1.0.1-beta6'
     implementation 'dev.langchain4j:langchain4j-open-ai:1.0.1'
-    implementation 'com.squareup.okhttp3:okhttp:4.12.0'  // OkHttp for HTTP requests
-    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'  // Jackson for JSON processing
-    runtimeOnly 'com.h2database:h2'
+
+    // HTTP and JSON utilities
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+
+    // Optional: lightweight embedded DB for testing or local use
+    runtimeOnly 'com.h2database:h2:2.2.224'
+
+    // Logging implementation for SLF4J
+    implementation 'org.slf4j:slf4j-simple:2.0.13'
+
+    // Testing (JUnit only, no Spring Boot)
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-tasks.named('test') {
-    useJUnitPlatform()
+application {
+    // Set the main class for the executable JAR
+    mainClass = 'de.solidassist.chatbot.ui.ChatBotUI'
+}
+
+tasks.named('jar') {
+    manifest {
+        attributes(
+                'Main-Class': 'de.solidassist.chatbot.ui.ChatBotUI'
+        )
+    }
 }
