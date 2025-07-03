@@ -23,6 +23,13 @@ public class SQLiteConnection {
         Path dbPath = DatabasePathUtils.getDatabaseFilePath();
         String dbUrl = "jdbc:sqlite:" + dbPath;
 
+        try {
+            // Ensure the SQLite JDBC driver is registered
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("SQLite JDBC driver not found", e);
+        }
+
         Connection conn = DriverManager.getConnection(dbUrl);
 
         // Enable foreign key constraints
