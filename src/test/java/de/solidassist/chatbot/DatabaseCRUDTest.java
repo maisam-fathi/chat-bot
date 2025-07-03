@@ -78,7 +78,6 @@ public class DatabaseCRUDTest {
             settings.setLlmModelName(llmModelName);
             settings.setMaxTokensPercent(100);
             settings.setTemperaturePercent(75);
-            settings.setLanguage("en");
             int settingsId = settingsDAO.insertSettings(settings);
             System.out.println("✅ ChatbotSettings inserted with ID: " + settingsId);
 
